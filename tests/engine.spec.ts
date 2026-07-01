@@ -18,11 +18,9 @@ async function scrub(page: Page, passes: 'rows' | 'cols') {
   if (passes === 'rows') {
     let dir = 1
     for (let y = box.y + pad; y <= box.y + box.height - pad; y += step) {
-      const x0 = dir > 0 ? box.x + pad : box.x + box.width - pad
       const x1 = dir > 0 ? box.x + box.width - pad : box.x + pad
       await page.mouse.move(x1, y, { steps: 15 })
       dir *= -1
-      void x0
     }
   } else {
     let dir = 1
@@ -36,10 +34,11 @@ async function scrub(page: Page, passes: 'rows' | 'cols') {
   await page.mouse.up()
 }
 
-test('erasing reveals the clean surface and progress climbs', async ({
+test('zen mode: erasing reveals the clean surface and progress climbs', async ({
   page,
 }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: /禪模式/ }).click()
   await expect(page.getByTestId('wash-surface').locator('canvas')).toHaveCount(3)
   expect(await readPct(page)).toBe(0)
 
@@ -48,13 +47,25 @@ test('erasing reveals the clean surface and progress climbs', async ({
   expect(await readPct(page)).toBeGreaterThan(40)
 })
 
-test('thorough scrubbing completes the level and fires the chime overlay', async ({
+test('level mode: scrubbing completes the level and fires the chime overlay', async ({
   page,
 }) => {
   test.setTimeout(60_000)
   await page.goto('/')
+  await page.getByRole('button', { name: /關卡模式/ }).click()
+  await page.getByRole('button', { name: /起霧的窗/ }).click()
+
   await scrub(page, 'rows')
   await scrub(page, 'cols')
-  // onComplete flips the overlay in when progress >= target (0.98).
   await expect(page.getByText('乾淨溜溜')).toBeVisible({ timeout: 5000 })
+})
+
+test('level select shows the first level unlocked and later ones locked', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /關卡模式/ }).click()
+  await expect(page.getByRole('button', { name: /起霧的窗/ })).toBeEnabled()
+  // A deep level starts locked (rendered as "第 N 關" and disabled).
+  await expect(page.getByRole('button', { name: /第 12 關/ })).toBeDisabled()
 })

@@ -30,6 +30,24 @@ body {
   -webkit-user-select: none;
 }
 
+@keyframes rinse-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop {
+  animation: rinse-pop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

@@ -1,115 +1,108 @@
-import { useState } from 'react'
-import { useWashEngine } from './hooks/useWashEngine'
+import { useEffect, useState } from 'react'
+import { MainMenu } from './components/MainMenu'
+import { LevelSelect } from './components/LevelSelect'
+import { GameScreen } from './components/GameScreen'
+import { LEVELS } from './data/levels'
+import { randomZen, type PlayConfig } from './play'
 import { sound } from './audio/sound'
+import {
+  loadProgress,
+  loadSettings,
+  saveSettings,
+  completeLevel,
+} from './lib/storage'
 
-const TARGET = 0.96
+type Scene = 'menu' | 'levels' | 'game'
 
 export default function App() {
-  const [seed, setSeed] = useState(12345)
-  const [progress, setProgress] = useState(0)
-  const [completed, setCompleted] = useState(false)
-  const [muted, setMuted] = useState(sound.isMuted)
+  const [scene, setScene] = useState<Scene>('menu')
+  const [config, setConfig] = useState<PlayConfig | null>(null)
+  const [progress, setProgress] = useState(loadProgress)
+  const [muted, setMuted] = useState(() => loadSettings().muted)
 
-  const wash = useWashEngine({
-    surface: 'tiles',
-    dirt: ['grime'],
-    seed,
-    targetPercent: TARGET,
-    onProgress: setProgress,
-    onComplete: () => setCompleted(true),
-  })
-
-  const pct = Math.round(progress * 100)
-
-  const newSurface = () => {
-    setProgress(0)
-    setCompleted(false)
-    setSeed(Math.floor(Math.random() * 1e9))
-  }
-
-  const reset = () => {
-    setProgress(0)
-    setCompleted(false)
-    wash.reset()
-  }
+  // Apply persisted mute to the audio graph once.
+  useEffect(() => {
+    sound.setMuted(muted)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggleMute = () => {
     const next = !muted
     setMuted(next)
     sound.setMuted(next)
+    saveSettings({ muted: next })
+  }
+
+  const startZen = () => {
+    setConfig(randomZen())
+    setScene('game')
+  }
+
+  const pickLevel = (levelId: number) => {
+    setConfig({ mode: 'level', level: LEVELS[levelId] })
+    setScene('game')
+  }
+
+  const exitGame = () => {
+    setScene(config?.mode === 'level' ? 'levels' : 'menu')
+  }
+
+  const onLevelComplete = (levelId: number, timeMs: number) => {
+    setProgress(completeLevel(levelId, timeMs, LEVELS.length))
+  }
+
+  if (scene === 'menu') {
+    return (
+      <MainMenu
+        muted={muted}
+        onToggleMute={toggleMute}
+        onPlayLevels={() => setScene('levels')}
+        onPlayZen={startZen}
+      />
+    )
+  }
+
+  if (scene === 'levels') {
+    return (
+      <LevelSelect
+        levels={LEVELS}
+        maxUnlocked={progress.maxUnlocked}
+        bestTimes={progress.bestTimes}
+        onPick={(lv) => pickLevel(lv.id)}
+        onBack={() => setScene('menu')}
+      />
+    )
+  }
+
+  // scene === 'game'
+  if (!config) return null
+
+  if (config.mode === 'level') {
+    const level = config.level
+    const hasNext = level.id + 1 < LEVELS.length
+    return (
+      <GameScreen
+        key={`level-${level.id}`}
+        config={config}
+        muted={muted}
+        onToggleMute={toggleMute}
+        onExit={exitGame}
+        bestMs={progress.bestTimes[level.id]}
+        hasNext={hasNext}
+        onComplete={(t) => onLevelComplete(level.id, t)}
+        onNext={() => hasNext && pickLevel(level.id + 1)}
+      />
+    )
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-4 px-4 py-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Rinse <span className="text-base text-sky-300/70">洗到爽</span>
-        </h1>
-        <button
-          onClick={toggleMute}
-          className="rounded-full bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
-          aria-label={muted ? '取消靜音' : '靜音'}
-        >
-          {muted ? '🔇' : '🔊'}
-        </button>
-      </header>
-
-      {/* Wash surface */}
-      <div className="relative">
-        <div
-          ref={wash.containerRef}
-          data-testid="wash-surface"
-          className="wash-surface aspect-[3/2] w-full overflow-hidden rounded-2xl bg-black/40 shadow-2xl ring-1 ring-white/10"
-        />
-
-        {progress === 0 && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="rounded-full bg-black/50 px-4 py-2 text-sm text-white/90 backdrop-blur">
-              按住拖曳，把它沖乾淨 💦
-            </span>
-          </div>
-        )}
-
-        {completed && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-black/55 backdrop-blur-sm">
-            <div className="text-3xl font-semibold">✨ 乾淨溜溜 ✨</div>
-            <button
-              onClick={newSurface}
-              className="rounded-full bg-sky-400 px-5 py-2 font-medium text-sky-950 hover:bg-sky-300"
-            >
-              再洗一片
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* HUD */}
-      <div className="flex items-center gap-4">
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-[width] duration-150"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span
-          data-testid="progress"
-          className="w-12 text-right text-sm tabular-nums text-white/80"
-        >
-          {pct}%
-        </span>
-        <button
-          onClick={reset}
-          className="rounded-full bg-white/10 px-4 py-1.5 text-sm hover:bg-white/20"
-        >
-          重置
-        </button>
-        <button
-          onClick={newSurface}
-          className="rounded-full bg-white/10 px-4 py-1.5 text-sm hover:bg-white/20"
-        >
-          換一片
-        </button>
-      </div>
-    </div>
+    <GameScreen
+      key={`zen-${config.seed}`}
+      config={config}
+      muted={muted}
+      onToggleMute={toggleMute}
+      onExit={exitGame}
+      onNewSurface={startZen}
+    />
   )
 }
