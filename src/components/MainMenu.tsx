@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react'
+
 interface MainMenuProps {
   muted: boolean
   onToggleMute: () => void
   onPlayLevels: () => void
   onPlayZen: () => void
+  loginSlot?: ReactNode
 }
 
 export function MainMenu({
@@ -10,6 +13,7 @@ export function MainMenu({
   onToggleMute,
   onPlayLevels,
   onPlayZen,
+  loginSlot,
 }: MainMenuProps) {
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center gap-8 px-6 py-10 text-center">
@@ -35,12 +39,15 @@ export function MainMenu({
         </button>
       </div>
 
-      <button
-        onClick={onToggleMute}
-        className="rounded-full bg-white/10 px-4 py-1.5 text-sm hover:bg-white/20"
-      >
-        {muted ? '🔇 靜音中' : '🔊 音效開'}
-      </button>
+      <div className="flex flex-col items-center gap-3">
+        <button
+          onClick={onToggleMute}
+          className="rounded-full bg-white/10 px-4 py-1.5 text-sm hover:bg-white/20"
+        >
+          {muted ? '🔇 靜音中' : '🔊 音效開'}
+        </button>
+        {loginSlot}
+      </div>
     </div>
   )
 }

@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MainMenu } from './components/MainMenu'
 import { LevelSelect } from './components/LevelSelect'
 import { GameScreen } from './components/GameScreen'
+import { LoginButton } from './components/LoginButton'
 import { LEVELS } from './data/levels'
 import { randomZen, type PlayConfig } from './play'
 import { sound } from './audio/sound'
+import { useAuth } from './auth/useAuth'
+import { syncOnLogin, pushProgress } from './auth/sync'
 import {
   loadProgress,
   loadSettings,
@@ -19,12 +22,37 @@ export default function App() {
   const [config, setConfig] = useState<PlayConfig | null>(null)
   const [progress, setProgress] = useState(loadProgress)
   const [muted, setMuted] = useState(() => loadSettings().muted)
+  const auth = useAuth()
 
   // Apply persisted mute to the audio graph once.
   useEffect(() => {
     sound.setMuted(muted)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // On sign-in: merge local + cloud progress, adopt the result.
+  useEffect(() => {
+    if (!auth.user) return
+    let alive = true
+    syncOnLogin(auth.user.uid).then((merged) => {
+      if (alive) setProgress(merged)
+    })
+    return () => {
+      alive = false
+    }
+  }, [auth.user])
+
+  // While signed in, push progress changes to the cloud (debounced).
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!auth.user) return
+    if (pushTimer.current) clearTimeout(pushTimer.current)
+    const uid = auth.user.uid
+    pushTimer.current = setTimeout(() => pushProgress(uid, progress), 800)
+    return () => {
+      if (pushTimer.current) clearTimeout(pushTimer.current)
+    }
+  }, [progress, auth.user])
 
   const toggleMute = () => {
     const next = !muted
@@ -58,6 +86,14 @@ export default function App() {
         onToggleMute={toggleMute}
         onPlayLevels={() => setScene('levels')}
         onPlayZen={startZen}
+        loginSlot={
+          <LoginButton
+            enabled={auth.enabled}
+            user={auth.user}
+            onSignIn={auth.signIn}
+            onSignOut={auth.signOut}
+          />
+        }
       />
     )
   }
