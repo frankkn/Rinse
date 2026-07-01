@@ -15,7 +15,7 @@ interface Particle {
   kind: Kind
 }
 
-const MAX_PARTICLES = 900
+const MAX_PARTICLES = 1600
 
 export class ParticleSystem {
   private items: Particle[] = []
@@ -27,33 +27,55 @@ export class ParticleSystem {
   /** Emit a burst of water at (x,y) travelling roughly along (dirX,dirY). */
   spray(x: number, y: number, dirX: number, dirY: number): void {
     const angle = Math.atan2(dirY, dirX)
-    const drops = 6
+
+    // Main jet: lots of fast droplets in a cone along the travel direction.
+    const drops = 16
     for (let i = 0; i < drops; i++) {
       if (this.items.length >= MAX_PARTICLES) break
-      const spread = (Math.random() - 0.5) * 0.9
+      const spread = (Math.random() - 0.5) * 1.1
       const a = angle + spread
-      const speed = 320 + Math.random() * 380
+      const speed = 300 + Math.random() * 460
       this.items.push({
         x,
         y,
         vx: Math.cos(a) * speed,
         vy: Math.sin(a) * speed,
         life: 0,
-        maxLife: 0.18 + Math.random() * 0.16,
-        size: 1.2 + Math.random() * 2.2,
+        maxLife: 0.18 + Math.random() * 0.2,
+        size: 1.2 + Math.random() * 2.8,
         kind: 'drop',
       })
     }
-    // Occasional soft mist puff.
-    if (Math.random() < 0.5 && this.items.length < MAX_PARTICLES) {
+
+    // Back-splash: a few droplets kicking back against the jet (impact spray).
+    for (let i = 0; i < 5; i++) {
+      if (this.items.length >= MAX_PARTICLES) break
+      const a = angle + Math.PI + (Math.random() - 0.5) * 1.6
+      const speed = 120 + Math.random() * 220
       this.items.push({
-        x: x + (Math.random() - 0.5) * 18,
-        y: y + (Math.random() - 0.5) * 18,
-        vx: (Math.random() - 0.5) * 40,
-        vy: -20 - Math.random() * 30,
+        x,
+        y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
         life: 0,
-        maxLife: 0.5 + Math.random() * 0.4,
-        size: 10 + Math.random() * 18,
+        maxLife: 0.14 + Math.random() * 0.14,
+        size: 1 + Math.random() * 2,
+        kind: 'drop',
+      })
+    }
+
+    // Soft mist puffs (1–2 each burst).
+    const mist = 1 + (Math.random() < 0.6 ? 1 : 0)
+    for (let i = 0; i < mist; i++) {
+      if (this.items.length >= MAX_PARTICLES) break
+      this.items.push({
+        x: x + (Math.random() - 0.5) * 22,
+        y: y + (Math.random() - 0.5) * 22,
+        vx: (Math.random() - 0.5) * 50,
+        vy: -20 - Math.random() * 40,
+        life: 0,
+        maxLife: 0.5 + Math.random() * 0.5,
+        size: 12 + Math.random() * 22,
         kind: 'mist',
       })
     }

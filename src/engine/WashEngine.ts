@@ -108,7 +108,7 @@ export class WashEngine {
     this.cssH = Math.max(1, Math.round(rect.height))
     this.dpr = window.devicePixelRatio || 1
     this.brushRadius =
-      this.opts.brushRadius ?? Math.max(22, Math.min(this.cssW, this.cssH) * 0.07)
+      this.opts.brushRadius ?? Math.max(26, Math.min(this.cssW, this.cssH) * 0.085)
 
     for (const [c, ctx] of [
       [this.clean, this.cleanCtx],

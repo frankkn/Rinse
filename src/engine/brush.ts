@@ -10,8 +10,10 @@ function stamp(
   strength: number,
 ): void {
   const g = ctx.createRadialGradient(x, y, 0, x, y, radius)
+  // Wide full-power core so the jet clears decisively where it points,
+  // with a soft edge so sweeping still matters.
   g.addColorStop(0, `rgba(0,0,0,${strength})`)
-  g.addColorStop(0.6, `rgba(0,0,0,${strength * 0.7})`)
+  g.addColorStop(0.72, `rgba(0,0,0,${strength * 0.9})`)
   g.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = g
   ctx.beginPath()
@@ -30,7 +32,7 @@ export function eraseSegment(
   x1: number,
   y1: number,
   radius: number,
-  strength = 0.8,
+  strength = 1,
 ): void {
   const prev = ctx.globalCompositeOperation
   ctx.globalCompositeOperation = 'destination-out'
