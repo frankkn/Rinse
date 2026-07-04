@@ -14,6 +14,13 @@ body,
   margin: 0;
 }
 
+/* Use the *visible* viewport on mobile so the layout isn't hidden behind the
+   browser's address bar / toolbars. Falls back to height:100% above. */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 body {
   background: var(--color-ink);
   color: var(--color-mist);

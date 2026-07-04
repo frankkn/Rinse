@@ -64,7 +64,7 @@ export function GameScreen(props: GameScreenProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-4 px-4 py-6">
+    <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-3 px-3 py-4 sm:gap-4 sm:px-4 sm:py-6">
       <Hud
         title={title}
         muted={props.muted}
@@ -100,8 +100,8 @@ export function GameScreen(props: GameScreenProps) {
       </div>
 
       {/* Progress row */}
-      <div className="flex items-center gap-4">
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="h-2.5 min-w-40 flex-1 overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-[width] duration-150"
             style={{ width: `${pct}%` }}

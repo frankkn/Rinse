@@ -1,8 +1,11 @@
 // Water FX drawn on the top (fx) canvas, cleared and redrawn each frame.
-// Three kinds: fast water 'drop's with motion-blur streaks, soft 'mist',
-// and 'runoff' — tinted droplets that slide down to sell "dirt washing away".
+// Kinds: fast water 'drop's with motion-blur streaks, soft 'mist', 'runoff' —
+// tinted droplets that slide down to sell "dirt washing away" — and 'ring',
+// an expanding impact ring where the jet hits the surface.
 
-type Kind = 'drop' | 'mist' | 'runoff'
+import { reducedMotion } from '../lib/motion'
+
+type Kind = 'drop' | 'mist' | 'runoff' | 'ring'
 
 interface Particle {
   x: number
@@ -27,9 +30,10 @@ export class ParticleSystem {
   /** Emit a burst of water at (x,y) travelling roughly along (dirX,dirY). */
   spray(x: number, y: number, dirX: number, dirY: number): void {
     const angle = Math.atan2(dirY, dirX)
+    const reduced = reducedMotion()
 
     // Main jet: lots of fast droplets in a cone along the travel direction.
-    const drops = 16
+    const drops = reduced ? 6 : 16
     for (let i = 0; i < drops; i++) {
       if (this.items.length >= MAX_PARTICLES) break
       const spread = (Math.random() - 0.5) * 1.1
@@ -64,8 +68,8 @@ export class ParticleSystem {
       })
     }
 
-    // Soft mist puffs (1–2 each burst).
-    const mist = 1 + (Math.random() < 0.6 ? 1 : 0)
+    // Soft mist puffs (1–2 each burst). Skipped under reduced motion.
+    const mist = reduced ? 0 : 1 + (Math.random() < 0.6 ? 1 : 0)
     for (let i = 0; i < mist; i++) {
       if (this.items.length >= MAX_PARTICLES) break
       this.items.push({
@@ -97,6 +101,22 @@ export class ParticleSystem {
         kind: 'runoff',
       })
     }
+  }
+
+  /** Expanding ring where the jet hits — `radius` is the brush radius in px. */
+  impact(x: number, y: number, radius: number): void {
+    if (reducedMotion()) return
+    if (this.items.length >= MAX_PARTICLES) return
+    this.items.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 0,
+      maxLife: 0.4,
+      size: radius,
+      kind: 'ring',
+    })
   }
 
   update(dt: number): void {
@@ -136,6 +156,15 @@ export class ParticleSystem {
         ctx.beginPath()
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
         ctx.fill()
+      } else if (p.kind === 'ring') {
+        // Thin ring that expands past the brush and fades — the "impact".
+        const r = p.size * (0.35 + t * 0.95)
+        const a = 0.4 * (1 - t)
+        ctx.strokeStyle = `rgba(224, 244, 255, ${a})`
+        ctx.lineWidth = 1 + 2 * (1 - t)
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+        ctx.stroke()
       } else {
         const a = 0.7 * (1 - t)
         ctx.fillStyle = `rgba(96, 82, 58, ${a})`

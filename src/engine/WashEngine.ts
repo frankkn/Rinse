@@ -5,6 +5,7 @@ import { eraseSegment } from './brush'
 import { ParticleSystem } from './particles'
 import { ProgressSampler } from './progress'
 import type { SoundEngine } from '../audio/sound'
+import { reducedMotion } from '../lib/motion'
 
 export interface WashEngineOptions {
   container: HTMLElement
@@ -52,6 +53,14 @@ export class WashEngine {
   private sinceSample = 0
   private cleanedPct = 0
   private completed = false
+
+  // Snapshot of the freshly-painted dirt, for the before/after completion flash.
+  private dirtSnapshot: HTMLCanvasElement | null = null
+  private flash = 0 // 1 → 0 over the completion flash
+  // Smoothed "how briskly dirt is coming off" (0..1) → spray loudness.
+  private sprayActivity = 0
+  private activityTarget = 0
+  private ringAccum = 0
 
   private spraying = false
   private px = 0
@@ -133,9 +142,23 @@ export class WashEngine {
       })
     })
     this.sampler.setBaseline(this.dirt)
+    this.snapshotDirt()
     this.cleanedPct = 0
     this.completed = false
+    this.flash = 0
+    this.sprayActivity = 0
     this.opts.onProgress?.(0)
+  }
+
+  /** Keep a copy of the pristine dirt layer to flash "before → after" on win. */
+  private snapshotDirt(): void {
+    const snap = this.dirtSnapshot ?? document.createElement('canvas')
+    snap.width = this.dirt.width
+    snap.height = this.dirt.height
+    const ctx = snap.getContext('2d')!
+    ctx.clearRect(0, 0, snap.width, snap.height)
+    ctx.drawImage(this.dirt, 0, 0)
+    this.dirtSnapshot = snap
   }
 
   private handleResize(): void {
@@ -165,6 +188,7 @@ export class WashEngine {
     this.lastPx = this.px
     this.lastPy = this.py
     this.spraying = true
+    this.activityTarget = 0.5 // sound "active" until the first progress sample
     this.opts.sound.startSpray()
   }
 
@@ -215,13 +239,37 @@ export class WashEngine {
         this.particles.runoff(this.px, this.py)
       }
 
+      // Steady impact ring under the jet (framerate-independent cadence).
+      this.ringAccum += dt
+      if (this.ringAccum >= 0.07) {
+        this.ringAccum = 0
+        this.particles.impact(this.px, this.py, this.brushRadius)
+      }
+
+      // Loudness follows how briskly dirt is coming off (smoothed).
+      this.sprayActivity += (this.activityTarget - this.sprayActivity) *
+        Math.min(1, dt * 6)
+      this.opts.sound.setIntensity(this.sprayActivity)
+
       this.lastPx = this.px
       this.lastPy = this.py
+    } else {
+      this.activityTarget = 0
+      this.sprayActivity = 0
     }
 
     this.particles.update(dt)
     this.fxCtx.clearRect(0, 0, this.cssW, this.cssH)
     this.particles.render(this.fxCtx)
+
+    // Before/after flash: the pristine grime ghosts back in and dissolves.
+    if (this.flash > 0 && this.dirtSnapshot) {
+      this.flash = Math.max(0, this.flash - dt / 0.7)
+      this.fxCtx.save()
+      this.fxCtx.globalAlpha = this.flash
+      this.fxCtx.drawImage(this.dirtSnapshot, 0, 0, this.cssW, this.cssH)
+      this.fxCtx.restore()
+    }
 
     // Throttled progress sampling.
     this.sinceSample += dt * 1000
@@ -229,8 +277,13 @@ export class WashEngine {
       this.sinceSample = 0
       const pct = this.sampler.cleaned(this.dirt)
       if (pct !== this.cleanedPct) {
+        // Removal since the last sample → target loudness (0..1, tuned).
+        const removed = Math.max(0, pct - this.cleanedPct)
+        this.activityTarget = Math.min(1, removed * 60)
         this.cleanedPct = pct
         this.opts.onProgress?.(pct)
+      } else {
+        this.activityTarget = 0
       }
       if (
         !this.completed &&
@@ -238,6 +291,7 @@ export class WashEngine {
         pct >= this.opts.targetPercent
       ) {
         this.completed = true
+        this.flash = reducedMotion() ? 0 : 1
         this.opts.sound.chime()
         this.opts.onComplete?.()
       }
