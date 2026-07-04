@@ -1,11 +1,14 @@
-import type { SurfaceType, DirtType } from './types'
+import type { SurfaceType, DirtType, ToughTier } from './types'
 import { getSurface } from './surfaces'
 import { getDirt } from './dirt'
 import { eraseSegment } from './brush'
 import { ParticleSystem } from './particles'
 import { ProgressSampler } from './progress'
+import { ToughDirtSystem } from './toughDirt'
 import type { SoundEngine } from '../audio/sound'
 import { reducedMotion } from '../lib/motion'
+
+export type ToolMode = 'water' | 'soap'
 
 export interface WashEngineOptions {
   container: HTMLElement
@@ -18,6 +21,8 @@ export interface WashEngineOptions {
   /** Brush radius in CSS px. Defaults to a fraction of the surface size. */
   brushRadius?: number
   density?: number
+  /** Tough-stain tiers to generate. Omit for levels 1–4 and basic zen. */
+  tiers?: ToughTier[]
   onProgress?: (pct: number) => void
   onComplete?: () => void
 }
@@ -25,22 +30,25 @@ export interface WashEngineOptions {
 const PROGRESS_INTERVAL_MS = 120
 
 /**
- * Owns three stacked canvases (clean → dirt → fx), the render loop, pointer
- * input, erasing, particles, progress sampling and spray sound. Coordinates
- * are CSS px throughout; each context is scaled by devicePixelRatio so the
- * backing store stays crisp on hi-dpi displays.
+ * Owns four stacked canvases (clean → dirt → tough → fx), the render loop,
+ * pointer input, erasing, tough-stain tracking, particles, progress sampling
+ * and spray sound. Coordinates are CSS px throughout; each context is scaled
+ * by devicePixelRatio so the backing store stays crisp on hi-dpi displays.
  */
 export class WashEngine {
   private opts: WashEngineOptions
   private clean: HTMLCanvasElement
   private dirt: HTMLCanvasElement
+  private tough: HTMLCanvasElement   // stubborn / chemical stain layer
   private fx: HTMLCanvasElement
   private cleanCtx: CanvasRenderingContext2D
   private dirtCtx: CanvasRenderingContext2D
+  private toughCtx: CanvasRenderingContext2D
   private fxCtx: CanvasRenderingContext2D
 
   private particles = new ParticleSystem()
   private sampler = new ProgressSampler()
+  private toughDirt: ToughDirtSystem | null = null
   private resizeObs: ResizeObserver
 
   private cssW = 0
@@ -54,10 +62,8 @@ export class WashEngine {
   private cleanedPct = 0
   private completed = false
 
-  // Snapshot of the freshly-painted dirt, for the before/after completion flash.
   private dirtSnapshot: HTMLCanvasElement | null = null
-  private flash = 0 // 1 → 0 over the completion flash
-  // Smoothed "how briskly dirt is coming off" (0..1) → spray loudness.
+  private flash = 0
   private sprayActivity = 0
   private activityTarget = 0
   private ringAccum = 0
@@ -67,6 +73,8 @@ export class WashEngine {
   private py = 0
   private lastPx = 0
   private lastPy = 0
+
+  private tool: ToolMode = 'water'
 
   constructor(opts: WashEngineOptions) {
     this.opts = opts
@@ -80,26 +88,29 @@ export class WashEngine {
     }
     this.clean = mk()
     this.dirt = mk()
+    this.tough = mk()
     this.fx = mk()
     this.fx.style.touchAction = 'none'
     this.fx.style.cursor = 'crosshair'
-    // Only the top canvas receives pointer events.
     this.clean.style.pointerEvents = 'none'
     this.dirt.style.pointerEvents = 'none'
+    this.tough.style.pointerEvents = 'none'
 
     opts.container.style.position = 'relative'
     opts.container.appendChild(this.clean)
     opts.container.appendChild(this.dirt)
+    opts.container.appendChild(this.tough)
     opts.container.appendChild(this.fx)
 
     this.cleanCtx = this.clean.getContext('2d')!
-    this.dirtCtx = this.dirt.getContext('2d')!
-    this.fxCtx = this.fx.getContext('2d')!
+    this.dirtCtx  = this.dirt.getContext('2d')!
+    this.toughCtx = this.tough.getContext('2d')!
+    this.fxCtx    = this.fx.getContext('2d')!
 
-    this.fx.addEventListener('pointerdown', this.onDown)
-    this.fx.addEventListener('pointermove', this.onMove)
-    this.fx.addEventListener('pointerup', this.onUp)
-    this.fx.addEventListener('pointercancel', this.onUp)
+    this.fx.addEventListener('pointerdown',  this.onDown)
+    this.fx.addEventListener('pointermove',  this.onMove)
+    this.fx.addEventListener('pointerup',    this.onUp)
+    this.fx.addEventListener('pointercancel',this.onUp)
     this.fx.addEventListener('pointerleave', this.onUp)
 
     this.resizeObs = new ResizeObserver(() => this.handleResize())
@@ -115,16 +126,17 @@ export class WashEngine {
     const rect = this.opts.container.getBoundingClientRect()
     this.cssW = Math.max(1, Math.round(rect.width))
     this.cssH = Math.max(1, Math.round(rect.height))
-    this.dpr = window.devicePixelRatio || 1
+    this.dpr  = window.devicePixelRatio || 1
     this.brushRadius =
       this.opts.brushRadius ?? Math.max(26, Math.min(this.cssW, this.cssH) * 0.085)
 
     for (const [c, ctx] of [
       [this.clean, this.cleanCtx],
-      [this.dirt, this.dirtCtx],
-      [this.fx, this.fxCtx],
+      [this.dirt,  this.dirtCtx],
+      [this.tough, this.toughCtx],
+      [this.fx,    this.fxCtx],
     ] as const) {
-      c.width = Math.round(this.cssW * this.dpr)
+      c.width  = Math.round(this.cssW * this.dpr)
       c.height = Math.round(this.cssH * this.dpr)
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     }
@@ -136,40 +148,68 @@ export class WashEngine {
   private paintDirt(): void {
     this.dirtCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     this.dirtCtx.clearRect(0, 0, this.cssW, this.cssH)
+
+    // Base coat so dirt is visible on any photo texture.
+    const baseAlpha = 0.38 + (this.opts.density ?? 0.85) * 0.22
+    this.dirtCtx.fillStyle = `rgba(36, 27, 16, ${baseAlpha})`
+    this.dirtCtx.fillRect(0, 0, this.cssW, this.cssH)
+
     this.opts.dirt.forEach((type, i) => {
       getDirt(type)(this.dirtCtx, this.cssW, this.cssH, this.opts.seed + i * 101, {
         density: this.opts.density,
       })
     })
+
+    // Tough-stain system
+    const tiers = this.opts.tiers
+    if (tiers?.length) {
+      if (!this.toughDirt) {
+        this.toughDirt = new ToughDirtSystem(this.cssW, this.cssH, this.opts.seed, tiers)
+      } else {
+        this.toughDirt.reset()
+      }
+      this.redrawTough(0)
+    }
+
     this.sampler.setBaseline(this.dirt)
     this.snapshotDirt()
     this.cleanedPct = 0
-    this.completed = false
-    this.flash = 0
+    this.completed  = false
+    this.flash      = 0
     this.sprayActivity = 0
     this.opts.onProgress?.(0)
   }
 
-  /** Keep a copy of the pristine dirt layer to flash "before → after" on win. */
   private snapshotDirt(): void {
     const snap = this.dirtSnapshot ?? document.createElement('canvas')
-    snap.width = this.dirt.width
+    snap.width  = this.dirt.width
     snap.height = this.dirt.height
     const ctx = snap.getContext('2d')!
     ctx.clearRect(0, 0, snap.width, snap.height)
-    ctx.drawImage(this.dirt, 0, 0)
+    ctx.drawImage(this.dirt,  0, 0)
+    ctx.drawImage(this.tough, 0, 0) // include tough blobs in before/after flash
     this.dirtSnapshot = snap
+  }
+
+  private redrawTough(ts: number): void {
+    this.toughCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
+    this.toughCtx.clearRect(0, 0, this.cssW, this.cssH)
+    this.toughDirt?.render(this.toughCtx, ts)
+  }
+
+  private computeProgress(): number {
+    const normalPct = this.sampler.cleaned(this.dirt)
+    if (!this.toughDirt) return normalPct
+    const tw = this.toughDirt.weight
+    return normalPct * (1 - tw) + this.toughDirt.cleanedFraction() * tw
   }
 
   private handleResize(): void {
     const rect = this.opts.container.getBoundingClientRect()
     if (
-      Math.round(rect.width) === this.cssW &&
+      Math.round(rect.width)  === this.cssW &&
       Math.round(rect.height) === this.cssH
-    ) {
-      return
-    }
-    // Regenerate at the new size (progress resets — acceptable trade-off).
+    ) return
     this.particles.clear()
     this.build()
   }
@@ -187,8 +227,16 @@ export class WashEngine {
     ;[this.px, this.py] = this.toLocal(e)
     this.lastPx = this.px
     this.lastPy = this.py
+
+    if (this.tool === 'soap') {
+      this.toughDirt?.applySoap(this.px, this.py, this.brushRadius * 1.8)
+      this.redrawTough(this.lastTs)
+      try { this.fx.releasePointerCapture(e.pointerId) } catch { /* ok */ }
+      return
+    }
+
     this.spraying = true
-    this.activityTarget = 0.5 // sound "active" until the first progress sample
+    this.activityTarget = 0.5
     this.opts.sound.startSpray()
   }
 
@@ -200,11 +248,7 @@ export class WashEngine {
   private onUp = (e: PointerEvent): void => {
     if (!this.spraying) return
     this.spraying = false
-    try {
-      this.fx.releasePointerCapture(e.pointerId)
-    } catch {
-      /* pointer may already be released */
-    }
+    try { this.fx.releasePointerCapture(e.pointerId) } catch { /* ok */ }
     this.opts.sound.stopSpray()
   }
 
@@ -215,54 +259,48 @@ export class WashEngine {
     this.lastTs = ts
 
     if (this.spraying) {
-      // Erase the stroke since the last frame (interpolated inside).
       eraseSegment(
         this.dirtCtx,
-        this.lastPx,
-        this.lastPy,
-        this.px,
-        this.py,
+        this.lastPx, this.lastPy,
+        this.px,     this.py,
         this.brushRadius,
       )
 
-      // Spray particles fly out along the direction of motion (or down if still).
+      // Apply water brush to tough-stain layer
+      this.toughDirt?.applyBrush(this.px, this.py, this.brushRadius, ts)
+
       let dx = this.px - this.lastPx
       let dy = this.py - this.lastPy
-      if (Math.hypot(dx, dy) < 0.5) {
-        dx = 0
-        dy = 1
-      }
+      if (Math.hypot(dx, dy) < 0.5) { dx = 0; dy = 1 }
       this.particles.spray(this.px, this.py, dx, dy)
 
-      // Grime runoff, proportional to how much dirt is still there.
-      if (Math.random() < (1 - this.cleanedPct) * 0.5) {
+      if (Math.random() < (1 - this.cleanedPct) * 0.5)
         this.particles.runoff(this.px, this.py)
-      }
 
-      // Steady impact ring under the jet (framerate-independent cadence).
       this.ringAccum += dt
       if (this.ringAccum >= 0.07) {
         this.ringAccum = 0
         this.particles.impact(this.px, this.py, this.brushRadius)
       }
 
-      // Loudness follows how briskly dirt is coming off (smoothed).
-      this.sprayActivity += (this.activityTarget - this.sprayActivity) *
-        Math.min(1, dt * 6)
+      this.sprayActivity +=
+        (this.activityTarget - this.sprayActivity) * Math.min(1, dt * 6)
       this.opts.sound.setIntensity(this.sprayActivity)
 
       this.lastPx = this.px
       this.lastPy = this.py
     } else {
       this.activityTarget = 0
-      this.sprayActivity = 0
+      this.sprayActivity  = 0
     }
+
+    // Redraw tough dirt every frame (foam bubble animation)
+    if (this.toughDirt) this.redrawTough(ts)
 
     this.particles.update(dt)
     this.fxCtx.clearRect(0, 0, this.cssW, this.cssH)
     this.particles.render(this.fxCtx)
 
-    // Before/after flash: the pristine grime ghosts back in and dissolves.
     if (this.flash > 0 && this.dirtSnapshot) {
       this.flash = Math.max(0, this.flash - dt / 0.7)
       this.fxCtx.save()
@@ -271,13 +309,11 @@ export class WashEngine {
       this.fxCtx.restore()
     }
 
-    // Throttled progress sampling.
     this.sinceSample += dt * 1000
     if (this.sinceSample >= PROGRESS_INTERVAL_MS) {
       this.sinceSample = 0
-      const pct = this.sampler.cleaned(this.dirt)
+      const pct = this.computeProgress()
       if (pct !== this.cleanedPct) {
-        // Removal since the last sample → target loudness (0..1, tuned).
         const removed = Math.max(0, pct - this.cleanedPct)
         this.activityTarget = Math.min(1, removed * 60)
         this.cleanedPct = pct
@@ -302,27 +338,43 @@ export class WashEngine {
 
   // --- public controls ---
 
+  setTool(t: ToolMode): void {
+    this.tool = t
+    this.fx.style.cursor = t === 'soap' ? 'cell' : 'crosshair'
+  }
+
+  get hasChemical(): boolean {
+    return this.opts.tiers?.includes('chemical') ?? false
+  }
+
+  get hasToughDirt(): boolean {
+    return !!this.toughDirt
+  }
+
   setBrushRadius(r: number): void {
     this.brushRadius = r
   }
 
-  /** Re-dirty the surface with the same seed and start over. */
   reset(): void {
     this.particles.clear()
+    this.toughDirt?.reset()
+    this.tool = 'water'
+    this.fx.style.cursor = 'crosshair'
     this.paintDirt()
   }
 
   destroy(): void {
     cancelAnimationFrame(this.raf)
     this.resizeObs.disconnect()
-    this.fx.removeEventListener('pointerdown', this.onDown)
-    this.fx.removeEventListener('pointermove', this.onMove)
-    this.fx.removeEventListener('pointerup', this.onUp)
+    this.fx.removeEventListener('pointerdown',   this.onDown)
+    this.fx.removeEventListener('pointermove',   this.onMove)
+    this.fx.removeEventListener('pointerup',     this.onUp)
     this.fx.removeEventListener('pointercancel', this.onUp)
-    this.fx.removeEventListener('pointerleave', this.onUp)
+    this.fx.removeEventListener('pointerleave',  this.onUp)
     this.opts.sound.stopSpray()
     this.clean.remove()
     this.dirt.remove()
+    this.tough.remove()
     this.fx.remove()
   }
 }

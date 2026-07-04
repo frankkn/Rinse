@@ -8,6 +8,9 @@ export type SurfaceType =
 
 export type DirtType = 'grime' | 'mud' | 'moss' | 'dust' | 'rust'
 
+/** Tiers of tough stains that resist normal washing. */
+export type ToughTier = 'stubborn' | 'chemical'
+
 /** Draws an opaque clean surface filling w×h (coordinates in CSS px). */
 export type SurfaceFn = (
   ctx: CanvasRenderingContext2D,

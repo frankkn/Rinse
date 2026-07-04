@@ -5,9 +5,10 @@ import { wood } from './wood'
 import { metal } from './metal'
 import { glass } from './glass'
 import { concrete } from './concrete'
+import { drawPhoto, preloadSurface } from './photoLoader'
 
-// Registry of clean-surface generators.
-export const surfaces: Record<SurfaceType, SurfaceFn> = {
+// Registry of procedural fallback generators.
+const surfaces: Record<SurfaceType, SurfaceFn> = {
   tiles,
   brick,
   wood,
@@ -16,6 +17,12 @@ export const surfaces: Record<SurfaceType, SurfaceFn> = {
   concrete,
 }
 
+/** Try photo first; fall back to procedural if the image wasn't preloaded. */
 export function getSurface(type: SurfaceType): SurfaceFn {
-  return surfaces[type] ?? tiles
+  const fallback = surfaces[type] ?? tiles
+  return (ctx, w, h, seed) => {
+    if (!drawPhoto(ctx, w, h, seed, type)) fallback(ctx, w, h, seed)
+  }
 }
+
+export { preloadSurface }

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { WashEngine } from '../engine/WashEngine'
-import type { SurfaceType, DirtType } from '../engine/types'
+import { useEffect, useRef, useState } from 'react'
+import { WashEngine, type ToolMode } from '../engine/WashEngine'
+import type { SurfaceType, DirtType, ToughTier } from '../engine/types'
+import { preloadSurface } from '../engine/surfaces'
 import { sound } from '../audio/sound'
 
 export interface UseWashEngineConfig {
@@ -9,6 +10,7 @@ export interface UseWashEngineConfig {
   seed: number
   targetPercent?: number
   density?: number
+  tiers?: ToughTier[]
   onProgress?: (pct: number) => void
   onComplete?: () => void
 }
@@ -19,18 +21,27 @@ export interface UseWashEngineConfig {
  * refs so re-renders don't tear it down mid-wash.
  */
 export function useWashEngine(config: UseWashEngineConfig) {
-  const { surface, dirt, seed, targetPercent, density } = config
+  const { surface, dirt, seed, targetPercent, density, tiers } = config
   const containerRef = useRef<HTMLDivElement>(null)
-  const engineRef = useRef<WashEngine | null>(null)
+  const engineRef    = useRef<WashEngine | null>(null)
+  const [photoReady, setPhotoReady] = useState(false)
 
   const onProgress = useRef(config.onProgress)
   const onComplete = useRef(config.onComplete)
   onProgress.current = config.onProgress
   onComplete.current = config.onComplete
 
-  const dirtKey = dirt.join(',')
+  const dirtKey  = dirt.join(',')
+  const tiersKey = tiers?.join(',') ?? ''
+
+  // Preload the surface photo before the engine calls getSurface().
+  useEffect(() => {
+    setPhotoReady(false)
+    void preloadSurface(surface, seed).then(() => setPhotoReady(true))
+  }, [surface, seed])
 
   useEffect(() => {
+    if (!photoReady) return
     const container = containerRef.current
     if (!container) return
 
@@ -41,6 +52,7 @@ export function useWashEngine(config: UseWashEngineConfig) {
       seed,
       targetPercent,
       density,
+      tiers,
       sound,
       onProgress: (p) => onProgress.current?.(p),
       onComplete: () => onComplete.current?.(),
@@ -51,13 +63,13 @@ export function useWashEngine(config: UseWashEngineConfig) {
       engine.destroy()
       engineRef.current = null
     }
-    // dirt is captured via dirtKey; other primitives are listed directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [surface, dirtKey, seed, targetPercent, density])
+  }, [surface, dirtKey, seed, targetPercent, density, tiersKey, photoReady])
 
   return {
     containerRef,
-    reset: () => engineRef.current?.reset(),
-    setBrushRadius: (r: number) => engineRef.current?.setBrushRadius(r),
+    reset:          ()               => engineRef.current?.reset(),
+    setBrushRadius: (r: number)      => engineRef.current?.setBrushRadius(r),
+    setTool:        (t: ToolMode)    => engineRef.current?.setTool(t),
   }
 }

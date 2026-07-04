@@ -39,7 +39,7 @@ test('zen mode: erasing reveals the clean surface and progress climbs', async ({
 }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /禪模式/ }).click()
-  await expect(page.getByTestId('wash-surface').locator('canvas')).toHaveCount(3)
+  await expect(page.getByTestId('wash-surface').locator('canvas')).toHaveCount(4)
   expect(await readPct(page)).toBe(0)
 
   await scrub(page, 'rows')
