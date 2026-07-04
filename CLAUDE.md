@@ -80,19 +80,25 @@ but kept out of the repo on purpose.
 - 🟡 M3a optional Google login + Firestore sync: **code complete & wired**,
   `.env.local` set locally. **Pending: user's manual Google sign-in test**
   (verify `users/{uid}` appears in Firestore; cross-device sync).
-- ⬜ M3b polish: dirt-runoff already exists; still want impact rings, sound
-  polish (tie loudness to dirt removed), before/after flash, **mobile layout**,
-  respect `prefers-reduced-motion`.
-- ⬜ M4 deploy: **Vercel** (base is `/`). Steps: import repo → add the same
-  `VITE_FIREBASE_*` as Vercel env vars → deploy → add `rinse.vercel.app` to
-  Firebase **Authentication → Settings → Authorized domains** (else Google login
-  is blocked online). Then tag `v1.0.0`.
+- ✅ M3b polish: dirt-runoff + **impact rings** (`particles.ts` `impact()`),
+  **sound loudness tied to dirt-removal rate** (`WashEngine` feeds
+  `sound.setIntensity`), **before/after flash** (pristine-dirt snapshot ghosts
+  back and dissolves on win), **mobile layout** (`100dvh` root, responsive
+  GameScreen padding + wrapping progress row), and **`prefers-reduced-motion`**
+  (`src/lib/motion.ts` thins particles + skips the flash).
+- 🟡 M4 deploy: **Vercel** (base is `/`). `vercel.json` committed (Vite preset,
+  SPA rewrite, hashed-asset caching). **Pending user's manual dashboard steps:**
+  import repo → add the same `VITE_FIREBASE_*` as Vercel env vars → deploy → add
+  the live domain (e.g. `rinse.vercel.app`) to Firebase **Authentication →
+  Settings → Authorized domains** (else Google login is blocked online). Then
+  tag `v1.0.0`.
 
 ## Known follow-ups
 
-- Bundle is ~230 KB gzip (Firebase). Could lazy-load `src/auth/*` so the initial
-  load stays light when unused.
-- README is still the Vite scaffold default; write a real one during M3b.
+- ✅ Firebase SDK is now code-split + lazy-loaded (`src/auth/config.ts` holds the
+  env-only `isFirebaseConfigured`; `firebase.ts` + the SDK load via dynamic
+  `import()` only on sign-in/sync). Initial bundle ~233 KB → ~71 KB gzip.
+- ✅ Real README written (replaced the Vite scaffold default).
 
 ## Git
 

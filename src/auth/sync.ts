@@ -1,6 +1,8 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { isFirebaseConfigured } from './config'
 import { loadProgress, saveProgress, type ProgressData } from '../lib/storage'
+
+// The Firestore SDK is imported lazily inside the async functions below, so it
+// only downloads once a signed-in user actually syncs. Pure helpers stay here.
 
 /** Combine two progress records: highest unlock, best (lowest) time per level. */
 export function mergeProgress(a: ProgressData, b: ProgressData): ProgressData {
@@ -35,8 +37,12 @@ function normalizeRemote(data: Record<string, unknown>): ProgressData {
  */
 export async function syncOnLogin(uid: string): Promise<ProgressData> {
   const local = loadProgress()
-  if (!db) return local
+  if (!isFirebaseConfigured) return local
   try {
+    const [{ db }, { doc, getDoc, setDoc }] = await Promise.all([
+      import('./firebase'),
+      import('firebase/firestore'),
+    ])
     const ref = doc(db, 'users', uid)
     const snap = await getDoc(ref)
     const merged = snap.exists()
@@ -53,8 +59,12 @@ export async function syncOnLogin(uid: string): Promise<ProgressData> {
 
 /** Push local progress to the cloud (caller debounces). */
 export async function pushProgress(uid: string, p: ProgressData): Promise<void> {
-  if (!db) return
+  if (!isFirebaseConfigured) return
   try {
+    const [{ db }, { doc, setDoc }] = await Promise.all([
+      import('./firebase'),
+      import('firebase/firestore'),
+    ])
     await setDoc(
       doc(db, 'users', uid),
       { ...p, updatedAt: Date.now() },

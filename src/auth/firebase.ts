@@ -1,33 +1,13 @@
-import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+// Firebase SDK initialization. This module pulls in the (heavy) Firebase SDK,
+// so it is ONLY ever reached via dynamic import() from useAuth/sync — never at
+// the top level. That keeps the SDK out of the initial bundle for users who
+// don't sign in. Importers must first check `isFirebaseConfigured` (config.ts).
+import { initializeApp } from 'firebase/app'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
+import { firebaseConfig } from './config'
 
-// Web config values are publishable (not secrets). Kept in .env.local so the
-// repo stays generic; injected at build time via GitHub Actions for Pages.
-const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-}
-
-/** True only when the env is filled in. Everything auth-related no-ops when false,
- *  so the game runs perfectly fine with no Firebase project. */
-export const isFirebaseConfigured = Boolean(
-  config.apiKey && config.projectId && config.authDomain,
-)
-
-let app: FirebaseApp | null = null
-let auth: Auth | null = null
-let db: Firestore | null = null
-
-if (isFirebaseConfigured) {
-  app = initializeApp(config)
-  auth = getAuth(app)
-  db = getFirestore(app)
-}
-
+const app = initializeApp(firebaseConfig)
+export const auth = getAuth(app)
+export const db = getFirestore(app)
 export const googleProvider = new GoogleAuthProvider()
-export { auth, db }

@@ -1,0 +1,20 @@
+// Env-only Firebase config. Deliberately imports NO Firebase SDK so this stays
+// in the main bundle (a few bytes) while the SDK itself is loaded lazily from
+// ./firebase only when a configured user actually signs in. See useAuth/sync.
+//
+// Web config values are publishable (not secrets). Kept in .env.local so the
+// repo stays generic; injected at build time via the host's env vars.
+export const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+/** True only when the env is filled in. Everything auth-related no-ops when
+ *  false, so the game runs perfectly fine with no Firebase project. */
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.authDomain,
+)
