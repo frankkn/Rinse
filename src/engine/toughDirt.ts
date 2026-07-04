@@ -71,6 +71,7 @@ export class ToughDirtSystem {
     let changed = false
     for (const b of this.blobs) {
       if (b.stage >= MAX_STAGE) continue
+      if (b.type === 'chemical' && !b.hasSoap) continue  // must apply soap first
       if (Math.hypot(x - b.x, y - b.y) > radius + b.radius * 0.6) continue
       if (now - b.lastBrushed < COOLDOWN_MS) continue
       b.stage = b.hasSoap ? MAX_STAGE : b.stage + 1
