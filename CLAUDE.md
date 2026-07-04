@@ -86,12 +86,9 @@ but kept out of the repo on purpose.
   back and dissolves on win), **mobile layout** (`100dvh` root, responsive
   GameScreen padding + wrapping progress row), and **`prefers-reduced-motion`**
   (`src/lib/motion.ts` thins particles + skips the flash).
-- 🟡 M4 deploy: **Vercel** (base is `/`). `vercel.json` committed (Vite preset,
-  SPA rewrite, hashed-asset caching). **Pending user's manual dashboard steps:**
-  import repo → add the same `VITE_FIREBASE_*` as Vercel env vars → deploy → add
-  the live domain (e.g. `rinse.vercel.app`) to Firebase **Authentication →
-  Settings → Authorized domains** (else Google login is blocked online). Then
-  tag `v1.0.0`.
+- ✅ M4 deploy: live at **https://rinse-omega.vercel.app** · tagged `v1.0.0`.
+  `vercel.json` (Vite preset, SPA rewrite, hashed-asset caching). Firebase
+  Authorized domains includes `rinse-omega.vercel.app`.
 
 ## Known follow-ups
 
