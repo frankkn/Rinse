@@ -1,122 +1,128 @@
+<div align="right">
+
+**English** | [繁體中文](README.zh-TW.md)
+
+</div>
+
 # Rinse 💦
 
-> 拖曳水柱把髒污沖掉，底下的乾淨表面就會露出來。沒有敵人、沒有計時壓力，就是洗——出奇地舒壓。
+> Drag a jet of water across the grime and watch the clean surface emerge underneath. No enemies, no timers — just washing. Surprisingly relaxing.
 
-## 立即遊玩
+## Play now
 
 **https://rinse-omega.vercel.app**
 
-無需安裝、無需登入，直接在瀏覽器開始洗。
+No install, no sign-in — start washing right in your browser.
 
 ---
 
-## 遊戲模式
+## Game modes
 
-### 關卡模式（12 關）
+### Level mode (12 levels)
 
-由淺入深，每關通關（清潔度 ≥ 99%）後解鎖下一關，並記錄最佳時間。
+Difficulty ramps up gradually. Clear a level (cleanliness ≥ 99%) to unlock the next one; your best time is recorded for each.
 
-| 關卡 | 名稱 | 表面 | 髒污 | 特殊污漬 |
-|------|------|------|------|----------|
-| 1 | 起霧的窗 | 玻璃 | 灰塵 | — |
-| 2 | 灰塵磁磚 | 磁磚 | 灰塵 | — |
-| 3 | 油膩廚房 | 磁磚 | 油垢 | — |
-| 4 | 塵封木桌 | 木頭 | 灰塵＋油垢 | — |
-| 5 | 泥濘後院 | 水泥 | 泥巴 | 頑強污漬 |
-| 6 | 生苔石階 | 磚牆 | 苔蘚 | 頑強污漬 |
-| 7 | 鏽蝕鐵板 | 金屬 | 鏽斑 | 頑強污漬 |
-| 8 | 髒污磚牆 | 磚牆 | 油垢＋泥巴 | 頑強污漬 |
-| 9 | 潮濕浴室 | 磁磚 | 苔蘚＋油垢 | 頑強污漬＋化學污漬 |
-| 10 | 廢棄車道 | 水泥 | 泥巴＋苔蘚 | 頑強污漬＋化學污漬 |
-| 11 | 海邊鐵窗 | 金屬 | 鏽斑＋油垢 | 頑強污漬＋化學污漬 |
-| 12 | 荒廢玻璃屋 | 玻璃 | 苔蘚＋灰塵 | 頑強污漬＋化學污漬 |
+| Level | Name | Surface | Dirt | Special stains |
+|-------|------|---------|------|----------------|
+| 1 | Foggy Window | Glass | Dust | — |
+| 2 | Dusty Tiles | Tiles | Dust | — |
+| 3 | Greasy Kitchen | Tiles | Grease | — |
+| 4 | Dust-Covered Desk | Wood | Dust + grease | — |
+| 5 | Muddy Backyard | Concrete | Mud | Tough stains |
+| 6 | Mossy Stone Steps | Brick | Moss | Tough stains |
+| 7 | Rusted Iron Plate | Metal | Rust | Tough stains |
+| 8 | Grimy Brick Wall | Brick | Grease + mud | Tough stains |
+| 9 | Damp Bathroom | Tiles | Moss + grease | Tough + chemical stains |
+| 10 | Abandoned Driveway | Concrete | Mud + moss | Tough + chemical stains |
+| 11 | Seaside Window Grille | Metal | Rust + grease | Tough + chemical stains |
+| 12 | Derelict Glasshouse | Glass | Moss + dust | Tough + chemical stains |
 
-### 禪模式
+### Zen mode
 
-隨機產生表面與髒污組合，隨時按「換一片」換下一塊，沒有通關條件，純粹解壓。
-
----
-
-## 特殊污漬說明
-
-### 頑強污漬（橘棕色）
-
-出現在第 5–12 關。這類污漬比普通髒污更難處理：
-
-- 需要**持續刷洗 3 次**才能完全清除
-- 每次刷過後顏色會逐漸變淡
-- 方法：用水管直接來回刷，重複 3 次即可
-
-### 化學污漬（黃綠色）
-
-出現在第 9–12 關。這類污漬需要搭配洗劑才有效：
-
-1. 切換到 🧴 **洗劑**，點一下污漬噴上去（出現白色泡泡代表生效）
-2. 切換回 🚿 **水管**，沖洗掉泡泡即可清除
-- 純用水管無法清除，必須先上洗劑
-
-> 工具切換按鈕在遊戲畫面**右側**。
+Randomly generated surface-and-dirt combinations. Hit "New surface" anytime for a fresh one. No win condition — pure stress relief.
 
 ---
 
-## 操作方式
+## Special stains
 
-| 操作 | 說明 |
-|------|------|
-| 按住拖曳 | 噴水清洗 |
-| 點右側 🧴 | 切換洗劑模式（點一下噴一塊） |
-| 點右側 🚿 | 切換回水管 |
-| 按「重來」 | 重置當前關卡 |
-| 按「換一片」 | 禪模式換新表面 |
+### Tough stains (orange-brown)
+
+Appear in levels 5–12. These are harder to remove than regular dirt:
+
+- Require **3 full scrubbing passes** to clear completely
+- Fade a little more with each pass
+- How to: scrub back and forth with the hose, three times over
+
+### Chemical stains (yellow-green)
+
+Appear in levels 9–12. These only respond to detergent:
+
+1. Switch to the 🧴 **detergent**, tap the stain to spray it (white foam means it took effect)
+2. Switch back to the 🚿 **hose** and rinse the foam away
+- Water alone won't remove them — detergent must go on first
+
+> The tool-switch buttons are on the **right side** of the game screen.
 
 ---
 
-## 在本機執行
+## Controls
+
+| Action | Description |
+|--------|-------------|
+| Press and drag | Spray water to clean |
+| Tap 🧴 (right side) | Switch to detergent mode (one tap sprays one patch) |
+| Tap 🚿 (right side) | Switch back to the hose |
+| "Restart" | Reset the current level |
+| "New surface" | Get a fresh surface in Zen mode |
+
+---
+
+## Running locally
 
 ```bash
 npm install
 npm run dev         # http://localhost:5173
 npm run build       # tsc -b && vite build
 npm run typecheck   # tsc -b
-npm run test:e2e    # Playwright（首次需執行 npx playwright install chromium）
+npm run test:e2e    # Playwright (first run: npx playwright install chromium)
 ```
 
 ---
 
-## 技術架構
+## Architecture
 
-純 TypeScript 引擎，React 只做 UI 外殼。畫布座標用 CSS px，全部乘以 `devicePixelRatio` 保持高解析度清晰。
+A pure TypeScript engine with React serving only as the UI shell. Canvas coordinates are in CSS px, multiplied by `devicePixelRatio` throughout for crisp high-DPI rendering.
 
-- **`src/engine/`** — 清洗引擎（4 層疊加畫布：clean → dirt → tough → fx）、`destination-out` 軟筆刷、水柱粒子系統（水滴、噴霧、逕流、衝擊環）、value-noise 程序化表面與髒污生成器、`ToughDirtSystem` 頑強污漬系統
-- **`src/audio/sound.ts`** — 噴水聲為帶 LFO 的白噪音迴圈，音量跟著清除速度即時變化；通關播放合成和弦。無音訊檔案
-- **`src/data/levels.ts`** — 12 關設定（表面 × 髒污 × 種子 × 特殊污漬）
-- **`src/engine/surfaces/`** — 實拍照片表面（`public/surfaces/`），找不到圖片時自動退回程序化生成
-- **`src/lib/`** — localStorage 進度（本地優先）+ `prefers-reduced-motion` 支援
-
----
-
-## 可選雲端同步（Firebase）
-
-登入完全選用。不設定時遊戲照常運作，登入按鈕自動隱藏。若要啟用 Google 登入與跨裝置進度同步：
-
-1. 建立 Firebase 專案，啟用 **Google 驗證** 與 **Firestore**
-2. 複製 `.env.example` 為 `.env.local`，填入 `VITE_FIREBASE_*` 的值（取自 Firebase 控制台 → 專案設定 → 網頁應用程式）
-3. Firestore 規則在 [`firestore.rules`](firestore.rules)，每位使用者只能讀寫自己的 `users/{uid}` 文件
-
-Firebase SDK 使用動態 `import()` 懶加載，僅在實際登入時下載，初始包不受影響。
+- **`src/engine/`** — washing engine (4 stacked canvases: clean → dirt → tough → fx), `destination-out` soft brush, water-jet particle system (droplets, spray, runoff, impact rings), value-noise procedural surface and dirt generators, `ToughDirtSystem` for tough stains
+- **`src/audio/sound.ts`** — the spray sound is an LFO-modulated white-noise loop whose volume tracks cleaning speed in real time; a synthesized chord plays on level clear. No audio files
+- **`src/data/levels.ts`** — configuration for all 12 levels (surface × dirt × seed × special stains)
+- **`src/engine/surfaces/`** — real photo surfaces (`public/surfaces/`), with automatic fallback to procedural generation when images are missing
+- **`src/lib/`** — localStorage progress (local-first) + `prefers-reduced-motion` support
 
 ---
 
-## 部署（Vercel）
+## Optional cloud sync (Firebase)
 
-repo 內含 [`vercel.json`](vercel.json)（Vite preset、SPA rewrite、靜態資源快取）。部署步驟：
+Signing in is entirely optional. Without configuration the game works as usual and the sign-in button hides itself. To enable Google sign-in and cross-device progress sync:
 
-1. 在 Vercel 匯入此 repo
-2. 選用：加入 `VITE_FIREBASE_*` 環境變數以啟用線上登入
-3. 部署後，將部署網域加到 Firebase → **Authentication → Settings → Authorized domains**
+1. Create a Firebase project and enable **Google Authentication** and **Firestore**
+2. Copy `.env.example` to `.env.local` and fill in the `VITE_FIREBASE_*` values (from Firebase console → Project settings → Web app)
+3. Firestore rules live in [`firestore.rules`](firestore.rules) — each user can only read and write their own `users/{uid}` document
+
+The Firebase SDK is lazy-loaded via dynamic `import()`, downloaded only when someone actually signs in, so the initial bundle is unaffected.
 
 ---
 
-## 使用技術
+## Deployment (Vercel)
 
-React 19 · TypeScript · Vite · Tailwind v4 · Canvas 2D · Web Audio API · Firebase（選用）· Playwright
+The repo ships with [`vercel.json`](vercel.json) (Vite preset, SPA rewrite, static-asset caching). To deploy:
+
+1. Import this repo into Vercel
+2. Optional: add the `VITE_FIREBASE_*` environment variables to enable sign-in in production
+3. After deploying, add the deployment domain to Firebase → **Authentication → Settings → Authorized domains**
+
+---
+
+## Built with
+
+React 19 · TypeScript · Vite · Tailwind v4 · Canvas 2D · Web Audio API · Firebase (optional) · Playwright
